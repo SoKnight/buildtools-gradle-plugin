@@ -54,7 +54,7 @@ public abstract class FetchBuildInfoTask extends DefaultTask {
     @Internal
     public abstract @NotNull Property<BuildInfoModel> getBuildInfo();
 
-    @Input
+    @Input @Optional
     public abstract @NotNull Property<String> getBuildVersion();
 
     @OutputFile
