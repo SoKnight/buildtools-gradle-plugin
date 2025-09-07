@@ -15,6 +15,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
+import static io.github.soknight.gradle.buildtools.Constants.DEFAULT_BUILD_VERSION;
+
 @CacheableTask
 public abstract class FetchBuildInfoTask extends DefaultTask {
 
@@ -22,6 +24,8 @@ public abstract class FetchBuildInfoTask extends DefaultTask {
 
     public FetchBuildInfoTask() {
         getBuildInfo().set(getOutputFile().map(this::deserializeBuildInfo));
+        getBuildVersion().set(DEFAULT_BUILD_VERSION);
+        getOutputFile().set(getBuildVersion().map(this::resolveDefaultOutputFile));
     }
 
     @TaskAction
@@ -30,18 +34,6 @@ public abstract class FetchBuildInfoTask extends DefaultTask {
         var outputPath = getOutputFile().get().getAsFile().toPath();
         Downloader.download(url, outputPath);
     }
-
-    @Input
-    public abstract @NotNull Property<String> getBuildVersion();
-
-    @Internal
-    public abstract @NotNull Property<BuildInfoModel> getBuildInfo();
-
-    @OutputFile
-    public abstract @NotNull RegularFileProperty getOutputFile();
-
-    @ServiceReference("buildTools")
-    public abstract @NotNull Property<BuildToolsService> getBuildToolsService();
 
     private @NotNull BuildInfoModel deserializeBuildInfo(@NotNull RegularFile file) {
         var filePath = file.getAsFile().toPath();
@@ -53,5 +45,22 @@ public abstract class FetchBuildInfoTask extends DefaultTask {
             throw new GradleException("Couldn't deserialize BuildInfoModel from: '%s'".formatted(filePath), ex);
         }
     }
+
+    private @NotNull RegularFile resolveDefaultOutputFile(@NotNull String buildVersion) {
+        var directory = getBuildToolsService().flatMap(BuildToolsService::getBuildInfoCacheDirectory).get();
+        return directory.file("%s.json".formatted(buildVersion));
+    }
+
+    @Internal
+    public abstract @NotNull Property<BuildInfoModel> getBuildInfo();
+
+    @Input
+    public abstract @NotNull Property<String> getBuildVersion();
+
+    @OutputFile
+    public abstract @NotNull RegularFileProperty getOutputFile();
+
+    @ServiceReference("buildTools")
+    public abstract @NotNull Property<BuildToolsService> getBuildToolsService();
 
 }
