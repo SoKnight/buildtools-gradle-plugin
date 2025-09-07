@@ -39,9 +39,6 @@ public final class BuildToolsPlugin implements Plugin<Project> {
             @NotNull BuildToolsExtension extension
     ) {
         return project.getGradle().getSharedServices().registerIfAbsent("buildTools", BuildToolsService.class, spec -> {
-            spec.getMaxParallelUsages().set(1);
-            spec.getMaxParallelUsages().finalizeValue();
-
             spec.getParameters().getBuildRemappedJars().set(extension.getBuildRemappedJars());
             spec.getParameters().getWorkingDirectory().set(extension.getWorkingDirectory());
         });
