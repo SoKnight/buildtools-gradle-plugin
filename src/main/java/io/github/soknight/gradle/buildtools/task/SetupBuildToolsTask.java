@@ -70,7 +70,6 @@ public abstract class SetupBuildToolsTask extends DefaultTask {
     public abstract @NotNull Property<Integer> getBuildNumber();
 
     @OutputFile
-    @PathSensitive(PathSensitivity.RELATIVE)
     public abstract @NotNull RegularFileProperty getOutputFile();
 
     @ServiceReference("buildTools")
