@@ -1,0 +1,5 @@
+[versions]
+buildtools-gradle-plugin = "1.0"
+
+[plugins]
+buildtools-gradle-plugin = { id = "io.github.soknight.buildtools", version.ref = "buildtools-gradle-plugin" }
