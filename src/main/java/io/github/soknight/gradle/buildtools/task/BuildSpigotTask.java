@@ -1,5 +1,6 @@
 package io.github.soknight.gradle.buildtools.task;
 
+import io.github.soknight.gradle.buildtools.model.BuildInfoModel;
 import io.github.soknight.gradle.buildtools.service.BuildToolsService;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.file.RegularFile;
@@ -32,6 +33,8 @@ public abstract class BuildSpigotTask extends JavaExec {
         getJavaLauncher().set(getRequiredJavaVersion().flatMap(this::resolveJavaLauncher));
         getLogging().captureStandardOutput(LogLevel.DEBUG);
         getLogging().captureStandardError(LogLevel.DEBUG);
+
+        dependsOn(getProject().getTasks().named("setupBuildTools", SetupBuildToolsTask.class));
     }
 
     @Override
@@ -47,6 +50,23 @@ public abstract class BuildSpigotTask extends JavaExec {
         } finally {
             buildToolsService.unlockBuildTools();
         }
+    }
+
+    public void useFetchBuildInfoTask(@NotNull String taskName) {
+        useFetchBuildInfoTask(getProject().getTasks().named(taskName, FetchBuildInfoTask.class));
+    }
+
+    public void useFetchBuildInfoTask(@NotNull FetchBuildInfoTask task) {
+        getBuildVersion().set(task.getBuildVersion());
+        getRequiredJavaVersion().set(task.getBuildInfo().map(BuildInfoModel::relevantJavaVersionOrDefault));
+        dependsOn(task);
+    }
+
+    public void useFetchBuildInfoTask(@NotNull Provider<FetchBuildInfoTask> taskProvider) {
+        var buildInfoProvider = taskProvider.flatMap(FetchBuildInfoTask::getBuildInfo);
+        getBuildVersion().set(taskProvider.flatMap(FetchBuildInfoTask::getBuildVersion));
+        getRequiredJavaVersion().set(buildInfoProvider.map(BuildInfoModel::relevantJavaVersionOrDefault));
+        dependsOn(taskProvider);
     }
 
     private @NotNull List<String> constructArgs(@NotNull Path outputPath) {

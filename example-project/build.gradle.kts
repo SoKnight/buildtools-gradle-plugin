@@ -13,14 +13,10 @@ buildTools {
     buildNumber = 193   // the latest on September 7th, 2025
 }
 
-var fetchBuildInfoTask = tasks.register<FetchBuildInfoTask>("fetchBuildInfo") {
+tasks.register<FetchBuildInfoTask>("fetchBuildInfo") {
     buildVersion = "1.21.5"
 }
 
 tasks.register<BuildSpigotTask>("buildSpigot") {
-    buildVersion = fetchBuildInfoTask.flatMap(FetchBuildInfoTask::getBuildVersion)
-    requiredJavaVersion = fetchBuildInfoTask.flatMap { it.buildInfo }.map { it.relevantJavaVersionOrDefault() }
-
-    dependsOn(fetchBuildInfoTask)
-    dependsOn(tasks.setupBuildTools)
+    useFetchBuildInfoTask("fetchBuildInfo")
 }
