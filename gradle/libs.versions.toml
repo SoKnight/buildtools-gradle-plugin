@@ -1,5 +1,11 @@
 [versions]
 gradle-publish-plugin = "2.0.0"
+jackson = "2.20.0"
+lombok = "1.18.38"
+
+[libraries]
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
 
 [plugins]
 gradle-publish-plugin = { id = "com.gradle.plugin-publish", version.ref = "gradle-publish-plugin" }

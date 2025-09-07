@@ -25,6 +25,17 @@ java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation(libs.jackson.databind)
+
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
+}
+
 tasks.withType<Javadoc> {
     enabled = false
 }
