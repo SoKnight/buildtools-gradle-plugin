@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 
+import static io.github.soknight.gradle.buildtools.Constants.USER_AGENT;
 import static java.net.http.HttpClient.Redirect.ALWAYS;
 import static java.net.http.HttpResponse.BodyHandlers.ofInputStream;
 import static java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor;
@@ -25,7 +26,6 @@ public final class Downloader {
 
     private static final @NotNull Duration CONNECT_TIMEOUT = Duration.ofSeconds(5L);
     private static final @NotNull Duration REQUEST_TIMEOUT = Duration.ofSeconds(10L);
-    private static final @NotNull String USER_AGENT = "BuildTools Gradle Plugin";
 
     private static final @NotNull HttpClient HTTP_CLIENT = initializeHttpClient();
 
