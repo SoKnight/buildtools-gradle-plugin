@@ -24,6 +24,8 @@ public final class BuildToolsPlugin implements Plugin<Project> {
             @NotNull Provider<BuildToolsService> service
     ) {
         project.getTasks().register("setupBuildTools", SetupBuildToolsTask.class, task -> {
+            task.setGroup("buildtools");
+
             task.getBuildNumber().set(extension.getBuildNumber());
             task.getBuildNumber().finalizeValueOnRead();
 
