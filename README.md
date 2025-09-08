@@ -36,7 +36,7 @@ buildTools {
 }
 ```
 
-## Usage cases
+## Use-cases
 
 ### Enumerated versions & Aggregating task
 You can enumerate all Spigot versions you want to build with BuildTools inside the `buildTools` extension:
