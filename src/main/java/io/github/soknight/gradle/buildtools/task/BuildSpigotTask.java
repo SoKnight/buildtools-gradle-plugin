@@ -31,8 +31,8 @@ public abstract class BuildSpigotTask extends JavaExec {
         getOutputFile().set(getBuildVersion().map(this::resolveDefaultOutputFile));
 
         getJavaLauncher().set(getRequiredJavaVersion().flatMap(this::resolveJavaLauncher));
-        getLogging().captureStandardOutput(LogLevel.DEBUG);
-        getLogging().captureStandardError(LogLevel.DEBUG);
+        getLogging().captureStandardOutput(LogLevel.INFO);
+        getLogging().captureStandardError(LogLevel.ERROR);
 
         dependsOn(getProject().getTasks().named("setupBuildTools", SetupBuildToolsTask.class));
     }
