@@ -2,6 +2,8 @@ package io.github.soknight.gradle.buildtools;
 
 import io.github.soknight.gradle.buildtools.extension.BuildToolsExtension;
 import io.github.soknight.gradle.buildtools.service.BuildToolsService;
+import io.github.soknight.gradle.buildtools.task.BuildSpigotTask;
+import io.github.soknight.gradle.buildtools.task.FetchBuildInfoTask;
 import io.github.soknight.gradle.buildtools.task.SetupBuildToolsTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -11,11 +13,44 @@ import org.jetbrains.annotations.NotNull;
 
 public final class BuildToolsPlugin implements Plugin<Project> {
 
+    private static final @NotNull String TASK_GROUP_NAME = "buildtools";
+
     @Override
     public void apply(@NotNull Project project) {
         var extension = registerExtension(project);
         var service = registerBuildService(project, extension);
         registerTasks(project, extension, service);
+
+        project.afterEvaluate(this::afterEvaluate);
+    }
+
+    private void afterEvaluate(@NotNull Project project) {
+        var extension = project.getExtensions().getByType(BuildToolsExtension.class);
+        var buildVersions = extension.getBuildVersions().getOrNull();
+        if (buildVersions == null || buildVersions.isEmpty())
+            return;
+
+        var tasks = project.getTasks();
+        var setupBuildToolsTask = project.getTasks().named("setupBuildTools", SetupBuildToolsTask.class);
+
+        var buildSpigotTasks = buildVersions.stream().distinct().map(buildVersion -> {
+            var fetchBuildInfoTaskName = "fetchBuildInfo@%s".formatted(buildVersion);
+            var fetchBuildInfoTask = tasks.register(fetchBuildInfoTaskName, FetchBuildInfoTask.class, task -> {
+                task.getBuildVersion().set(buildVersion);
+                task.setGroup(TASK_GROUP_NAME);
+            });
+
+            var buildSpigotTaskName = "buildSpigot@%s".formatted(buildVersion);
+            return tasks.register(buildSpigotTaskName, BuildSpigotTask.class, task -> {
+                task.setGroup(TASK_GROUP_NAME);
+                task.useFetchBuildInfoTask(fetchBuildInfoTask);
+            });
+        }).toList();
+
+        tasks.register("buildAllSpigot", task -> {
+            task.setGroup(TASK_GROUP_NAME);
+            buildSpigotTasks.forEach(task::dependsOn);
+        });
     }
 
     private static void registerTasks(
@@ -24,7 +59,7 @@ public final class BuildToolsPlugin implements Plugin<Project> {
             @NotNull Provider<BuildToolsService> service
     ) {
         project.getTasks().register("setupBuildTools", SetupBuildToolsTask.class, task -> {
-            task.setGroup("buildtools");
+            task.setGroup(TASK_GROUP_NAME);
 
             task.getBuildNumber().set(extension.getBuildNumber());
             task.getBuildNumber().finalizeValueOnRead();
