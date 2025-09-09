@@ -83,6 +83,7 @@ public final class BuildToolsPlugin implements Plugin<Project> {
     ) {
         return project.getGradle().getSharedServices().registerIfAbsent("buildTools", BuildToolsService.class, spec -> {
             spec.getParameters().getBuildRemappedJars().set(extension.getBuildRemappedJars());
+            spec.getParameters().getExpectedArtifacts().set(extension.getExpectedArtifacts());
             spec.getParameters().getWorkingDirectory().set(extension.getWorkingDirectory());
         });
     }

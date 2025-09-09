@@ -1,5 +1,6 @@
 package io.github.soknight.gradle.buildtools.service;
 
+import io.github.soknight.gradle.buildtools.extension.ExpectedArtifactsDefinition;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFile;
@@ -27,6 +28,10 @@ public abstract class BuildToolsService implements BuildService<BuildToolsServic
     @ApiStatus.Internal
     public void unlockBuildTools() {
         this.buildToolsLock.unlock();
+    }
+
+    public @NotNull Provider<ExpectedArtifactsDefinition> getExpectedArtifacts() {
+        return getParameters().getExpectedArtifacts();
     }
 
     public @NotNull Provider<RegularFile> getBuildToolsJarFile() {

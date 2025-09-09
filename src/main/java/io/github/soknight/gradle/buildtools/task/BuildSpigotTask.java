@@ -1,9 +1,12 @@
 package io.github.soknight.gradle.buildtools.task;
 
+import io.github.soknight.gradle.buildtools.extension.ExpectedArtifactsDefinition;
 import io.github.soknight.gradle.buildtools.model.BuildInfoModel;
+import io.github.soknight.gradle.buildtools.model.ExpectedArtifactType;
 import io.github.soknight.gradle.buildtools.model.VersionInfoModel;
 import io.github.soknight.gradle.buildtools.service.BuildToolsService;
 import io.github.soknight.gradle.buildtools.util.JsonDeserializer;
+import org.gradle.api.Action;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.file.RegularFileProperty;
@@ -11,22 +14,20 @@ import org.gradle.api.logging.LogLevel;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.services.ServiceReference;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.JavaExec;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.*;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 import org.gradle.jvm.toolchain.JavaLauncher;
 import org.gradle.jvm.toolchain.JavaToolchainService;
-import org.gradle.work.DisableCachingByDefault;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
-@DisableCachingByDefault(because = "Writes to the local Maven repo; not safe for build cache")
+@CacheableTask
 public abstract class BuildSpigotTask extends JavaExec {
 
     public BuildSpigotTask() {
@@ -36,6 +37,9 @@ public abstract class BuildSpigotTask extends JavaExec {
         getJavaLauncher().set(getRequiredJavaVersion().flatMap(this::resolveJavaLauncher));
         getLogging().captureStandardOutput(LogLevel.INFO);
         getLogging().captureStandardError(LogLevel.ERROR);
+
+        getOutputs().upToDateWhen(task -> isExpectedOutputFileExist());
+        setOnlyIf(task -> !getSkipIfAllArtifactsExist().getOrElse(Boolean.TRUE) || !areAllExpectedArtifactsExist());
 
         dependsOn(getProject().getTasks().named("setupBuildTools", SetupBuildToolsTask.class));
     }
@@ -53,6 +57,16 @@ public abstract class BuildSpigotTask extends JavaExec {
         } finally {
             buildToolsService.unlockBuildTools();
         }
+    }
+
+    public synchronized void expectedArtifacts(@NotNull Action<ExpectedArtifactsDefinition> action) {
+        var expectedArtifacts = getExpectedArtifacts().getOrNull();
+        if (expectedArtifacts == null) {
+            expectedArtifacts = getProject().getObjects().newInstance(ExpectedArtifactsDefinition.class);
+            getExpectedArtifacts().set(expectedArtifacts);
+        }
+
+        action.execute(expectedArtifacts);
     }
 
     public void useFetchBuildInfoTask(@NotNull String taskName) {
@@ -89,6 +103,74 @@ public abstract class BuildSpigotTask extends JavaExec {
         dependsOn(taskProvider);
     }
 
+    private @Nullable Provider<JavaLauncher> resolveJavaLauncher(@Nullable Integer requiredJavaVersion) {
+        if (requiredJavaVersion == null || requiredJavaVersion <= 0)
+            return null;
+
+        var javaToolchainService = getProject().getExtensions().getByType(JavaToolchainService.class);
+        var javaMajorVersion = JavaVersion.forClassVersion(requiredJavaVersion).getMajorVersion();
+        var javaLanguageVersion = JavaLanguageVersion.of(javaMajorVersion);
+        return javaToolchainService.launcherFor(spec -> spec.getLanguageVersion().set(javaLanguageVersion));
+    }
+
+    private @NotNull RegularFile resolveDefaultOutputFile(@NotNull String minecraftVersion) {
+        var directory = getBuildToolsService().flatMap(BuildToolsService::getOutputDirectory).get();
+        return directory.file("spigot-%s.jar".formatted(minecraftVersion));
+    }
+
+    private boolean isExpectedOutputFileExist() {
+        if (isExpectedArtifact(def -> def.getBootstrapJar().getOrNull())) {
+            var outputFile = getOutputFile().getAsFile().get();
+            if (outputFile.isFile() && outputFile.length() > 0L) {
+                getLogger().info("BOOTSTRAP_JAR > UP-TO-DATE: '{}'", outputFile.getAbsolutePath());
+            } else {
+                getLogger().warn("BOOTSTRAP_JAR > OUTDATED: '{}'", outputFile.getAbsolutePath());
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean areAllExpectedArtifactsExist() {
+        if (!isExpectedOutputFileExist())
+            return false;
+
+        var minecraftSnapshot = getSpigotVersion().orElse(getMinecraftVersion().map("%s-SNAPSHOT"::formatted)).get();
+        var spigotSnapshot = getSpigotVersion().orElse(getMinecraftVersion().map("%s-R0.1-SNAPSHOT"::formatted)).get();
+
+        var localMavenRepoPath = Path.of(System.getProperty("user.home"), ".m2", "repository");
+        var supportsRemapped = getMinecraftVersion().map(this::hasMappingsUrl).getOrElse(Boolean.FALSE);
+
+        for (var artifactType : ExpectedArtifactType.values()) {
+            if (artifactType.requiresBuildWithRemappedOption() && !supportsRemapped)
+                continue;
+
+            var filePath = localMavenRepoPath.resolve(artifactType.repoPath(minecraftSnapshot, spigotSnapshot));
+            if (Files.isRegularFile(filePath) && filePath.toFile().length() > 0L) {
+                getLogger().info("{} > UP-TO-DATE: '{}'", artifactType, filePath);
+            } else {
+                getLogger().warn("{} > OUTDATED: '{}'", artifactType, filePath);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isExpectedArtifact(@NotNull Function<ExpectedArtifactsDefinition, Boolean> valueFunction) {
+        var taskScoped = getExpectedArtifacts().map(valueFunction::apply).getOrNull();
+        if (taskScoped != null)
+            return taskScoped;
+
+        var globalScoped = getBuildToolsService()
+                .flatMap(BuildToolsService::getExpectedArtifacts)
+                .map(valueFunction::apply)
+                .getOrNull();
+
+        return globalScoped != null ? globalScoped : true;
+    }
+
     private @NotNull List<String> constructArgs(@NotNull Path outputPath) {
         var produceRemapped = getBuildRemappedJars()
                 .orElse(getMinecraftVersion().map(this::hasMappingsUrl))
@@ -109,21 +191,6 @@ public abstract class BuildSpigotTask extends JavaExec {
         args.add("--rev");
         args.add(getMinecraftVersion().get());
         return args;
-    }
-
-    private @Nullable Provider<JavaLauncher> resolveJavaLauncher(@Nullable Integer requiredJavaVersion) {
-        if (requiredJavaVersion == null || requiredJavaVersion <= 0)
-            return null;
-
-        var javaToolchainService = getProject().getExtensions().getByType(JavaToolchainService.class);
-        var javaMajorVersion = JavaVersion.forClassVersion(requiredJavaVersion).getMajorVersion();
-        var javaLanguageVersion = JavaLanguageVersion.of(javaMajorVersion);
-        return javaToolchainService.launcherFor(spec -> spec.getLanguageVersion().set(javaLanguageVersion));
-    }
-
-    private @NotNull RegularFile resolveDefaultOutputFile(@NotNull String minecraftVersion) {
-        var directory = getBuildToolsService().flatMap(BuildToolsService::getOutputDirectory).get();
-        return directory.file("spigot-%s.jar".formatted(minecraftVersion));
     }
 
     private @Nullable Boolean hasMappingsUrl(@NotNull String minecraftVersion) {
@@ -157,10 +224,16 @@ public abstract class BuildSpigotTask extends JavaExec {
     public abstract @NotNull Property<Boolean> getBuildRemappedJars();
 
     @Input @Optional
+    public abstract @NotNull Property<ExpectedArtifactsDefinition> getExpectedArtifacts();
+
+    @Input @Optional
     public abstract @NotNull Property<String> getMinecraftVersion();
 
     @Input @Optional
     public abstract @NotNull Property<String> getSpigotVersion();
+
+    @Input @Optional
+    public abstract @NotNull Property<Boolean> getSkipIfAllArtifactsExist();
 
     @Input
     public abstract @NotNull Property<Integer> getRequiredJavaVersion();
