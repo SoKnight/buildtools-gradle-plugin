@@ -39,12 +39,20 @@ public final class BuildToolsPlugin implements Plugin<Project> {
             var fetchBuildInfoTask = tasks.register(fetchBuildInfoTaskName, FetchBuildInfoTask.class, task -> {
                 task.getMinecraftVersion().set(buildVersion);
                 task.setGroup(TASK_GROUP_NAME);
+
+                task.getMinecraftVersion().finalizeValueOnRead();
+                task.getModel().finalizeValueOnRead();
+                task.getOutputFile().finalizeValueOnRead();
             });
 
             var fetchVersionInfoTaskName = "fetchVersionInfo@%s".formatted(buildVersion);
             var fetchVersionInfoTask = tasks.register(fetchVersionInfoTaskName, FetchVersionInfoTask.class, task -> {
                 task.setGroup(TASK_GROUP_NAME);
                 task.useFetchBuildInfoTask(fetchBuildInfoTask);
+
+                task.getBuildDataRef().finalizeValueOnRead();
+                task.getModel().finalizeValueOnRead();
+                task.getOutputFile().finalizeValueOnRead();
             });
 
             var buildSpigotTaskName = "buildSpigot@%s".formatted(buildVersion);
@@ -52,6 +60,14 @@ public final class BuildToolsPlugin implements Plugin<Project> {
                 task.setGroup(TASK_GROUP_NAME);
                 task.useFetchBuildInfoTask(fetchBuildInfoTask);
                 task.useFetchVersionInfoTask(fetchVersionInfoTask);
+
+                task.getBuildRemappedJars().finalizeValueOnRead();
+                task.getExpectedArtifacts().finalizeValueOnRead();
+                task.getMinecraftVersion().finalizeValueOnRead();
+                task.getOutputFile().finalizeValueOnRead();
+                task.getRequiredJavaVersion().finalizeValueOnRead();
+                task.getSkipIfAllArtifactsExist().finalizeValueOnRead();
+                task.getSpigotVersion().finalizeValueOnRead();
             });
         }).toList();
 
@@ -69,8 +85,8 @@ public final class BuildToolsPlugin implements Plugin<Project> {
         project.getTasks().register("setupBuildTools", SetupBuildToolsTask.class, task -> {
             task.setGroup(TASK_GROUP_NAME);
 
-            task.getBuildNumber().set(extension.getBuildToolsVersion());
-            task.getBuildNumber().finalizeValueOnRead();
+            task.getBuildToolsVersion().set(extension.getBuildToolsVersion());
+            task.getBuildToolsVersion().finalizeValueOnRead();
 
             task.getOutputFile().set(service.flatMap(BuildToolsService::getBuildToolsJarFile));
             task.getOutputFile().finalizeValueOnRead();

@@ -19,13 +19,13 @@ public abstract class SetupBuildToolsTask extends DefaultTask {
 
     @TaskAction
     public void run() {
-        var url = URL.formatted(getBuildNumber().get());
+        var url = URL.formatted(getBuildToolsVersion().get());
         var outputPath = getOutputFile().get().getAsFile().toPath();
         Downloader.download(url, outputPath);
     }
 
     @Input
-    public abstract @NotNull Property<Integer> getBuildNumber();
+    public abstract @NotNull Property<Integer> getBuildToolsVersion();
 
     @OutputFile
     public abstract @NotNull RegularFileProperty getOutputFile();
