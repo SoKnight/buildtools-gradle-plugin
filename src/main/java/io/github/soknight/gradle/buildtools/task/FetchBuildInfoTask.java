@@ -22,7 +22,7 @@ public abstract class FetchBuildInfoTask extends DefaultTask {
 
     public FetchBuildInfoTask() {
         getModel().set(getOutputFile().map(this::deserializeModel));
-        getOutputFile().set(getMinecraftVersion().flatMap(getBuildToolsService().get()::getMetadataBuildInfoFile));
+        getOutputFile().convention(getMinecraftVersion().flatMap(getBuildToolsService().get()::getMetadataBuildInfoFile));
     }
 
     @TaskAction

@@ -27,7 +27,7 @@ public abstract class FetchVersionInfoTask extends DefaultTask {
 
     public FetchVersionInfoTask() {
         getModel().set(getOutputFile().map(this::deserializeModel));
-        getOutputFile().set(getBuildDataRef().flatMap(getBuildToolsService().get()::getMetadataVersionInfoFile));
+        getOutputFile().convention(getBuildDataRef().flatMap(getBuildToolsService().get()::getMetadataVersionInfoFile));
     }
 
     @TaskAction
