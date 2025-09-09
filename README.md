@@ -55,7 +55,7 @@ Also plugin will create aggregating task `buildAllSpigot`, which may be used to 
 Of course, plugin will not register these tasks if there are no `minecraftVersions` will be declared via `buildTools` extension.
 
 ### Manual tasks declaration
-`FetchBuildInfoTask` and `BuildSpigotTask` may be registered manually, like this:
+`FetchBuildInfoTask`, `FetchVersionInfoTask` and `BuildSpigotTask` may be registered manually, like this:
 ```kotlin
 tasks.register<FetchBuildInfoTask>("fetchBuildInfo") {
     // declare Minecraft version you want to build here
