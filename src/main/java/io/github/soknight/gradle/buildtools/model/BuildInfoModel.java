@@ -43,8 +43,8 @@ public record BuildInfoModel(
         if (relevantVersion.isPresent())
             return relevantVersion;
 
-        // fallback to max supported version
-        return IntStream.of(supportedJavaVersions).max();
+        // fallback to min supported version
+        return IntStream.of(supportedJavaVersions).min();
     }
 
     public int relevantJavaVersionOrDefault() {
