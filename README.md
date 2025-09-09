@@ -8,14 +8,14 @@ To use the plugin, apply the following two steps:
 Kotlin DSL:
 ```kotlin
 plugins {
-    id("io.github.soknight.buildtools") version "1.0"
+    id("io.github.soknight.buildtools") version "1.1"
 }
 ```
 
 Groovy DSL:
 ```groovy
 plugins {
-    id 'io.github.soknight.buildtools' version '1.0'
+    id 'io.github.soknight.buildtools' version '1.1'
 }
 ```
 
