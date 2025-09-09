@@ -3,6 +3,7 @@ package io.github.soknight.gradle.buildtools.task;
 import io.github.soknight.gradle.buildtools.model.BuildInfoModel;
 import io.github.soknight.gradle.buildtools.model.VersionInfoModel;
 import io.github.soknight.gradle.buildtools.service.BuildToolsService;
+import io.github.soknight.gradle.buildtools.util.JsonDeserializer;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.file.RegularFileProperty;
@@ -30,8 +31,7 @@ public abstract class BuildSpigotTask extends JavaExec {
 
     public BuildSpigotTask() {
         getBuildRemappedJars().convention(getBuildToolsService().get().getParameters().getBuildRemappedJars());
-        getSpigotVersion().set(getMinecraftVersion().map(version -> version + "-SNAPSHOT"));
-        getOutputFile().set(getMinecraftVersion().map(this::resolveDefaultOutputFile));
+        getOutputFile().convention(getMinecraftVersion().map(this::resolveDefaultOutputFile));
 
         getJavaLauncher().set(getRequiredJavaVersion().flatMap(this::resolveJavaLauncher));
         getLogging().captureStandardOutput(LogLevel.INFO);
@@ -60,15 +60,15 @@ public abstract class BuildSpigotTask extends JavaExec {
     }
 
     public void useFetchBuildInfoTask(@NotNull FetchBuildInfoTask task) {
-        getMinecraftVersion().convention(task.getMinecraftVersion());
-        getRequiredJavaVersion().convention(task.getModel().map(BuildInfoModel::relevantJavaVersionOrDefault));
+        getMinecraftVersion().set(task.getMinecraftVersion());
+        getRequiredJavaVersion().set(task.getModel().map(BuildInfoModel::relevantJavaVersionOrDefault));
         dependsOn(task);
     }
 
     public void useFetchBuildInfoTask(@NotNull Provider<FetchBuildInfoTask> taskProvider) {
         var buildInfoProvider = taskProvider.flatMap(FetchBuildInfoTask::getModel);
-        getMinecraftVersion().convention(taskProvider.flatMap(FetchBuildInfoTask::getMinecraftVersion));
-        getRequiredJavaVersion().convention(buildInfoProvider.map(BuildInfoModel::relevantJavaVersionOrDefault));
+        getMinecraftVersion().set(taskProvider.flatMap(FetchBuildInfoTask::getMinecraftVersion));
+        getRequiredJavaVersion().set(buildInfoProvider.map(BuildInfoModel::relevantJavaVersionOrDefault));
         dependsOn(taskProvider);
     }
 
@@ -77,19 +77,23 @@ public abstract class BuildSpigotTask extends JavaExec {
     }
 
     public void useFetchVersionInfoTask(@NotNull FetchVersionInfoTask task) {
-        getMinecraftVersion().convention(task.getModel().map(VersionInfoModel::minecraftVersion));
-        getSpigotVersion().convention(task.getModel().map(VersionInfoModel::spigotVersion));
+        getMinecraftVersion().set(task.getModel().map(VersionInfoModel::minecraftVersion));
+        getSpigotVersion().set(task.getModel().map(VersionInfoModel::spigotVersion));
         dependsOn(task);
     }
 
     public void useFetchVersionInfoTask(@NotNull Provider<FetchVersionInfoTask> taskProvider) {
         var versionInfoProvider = taskProvider.flatMap(FetchVersionInfoTask::getModel);
-        getMinecraftVersion().convention(versionInfoProvider.map(VersionInfoModel::minecraftVersion));
-        getSpigotVersion().convention(versionInfoProvider.map(VersionInfoModel::spigotVersion));
+        getMinecraftVersion().set(versionInfoProvider.map(VersionInfoModel::minecraftVersion));
+        getSpigotVersion().set(versionInfoProvider.map(VersionInfoModel::spigotVersion));
         dependsOn(taskProvider);
     }
 
     private @NotNull List<String> constructArgs(@NotNull Path outputPath) {
+        var produceRemapped = getBuildRemappedJars()
+                .orElse(getMinecraftVersion().map(this::hasMappingsUrl))
+                .getOrElse(Boolean.FALSE);
+
         List<String> args = new ArrayList<>();
         args.add("--nogui");
 
@@ -99,7 +103,7 @@ public abstract class BuildSpigotTask extends JavaExec {
         args.add("--output-dir");
         args.add(outputPath.getParent().toAbsolutePath().toString());
 
-        if (getBuildRemappedJars().getOrElse(Boolean.TRUE))
+        if (produceRemapped)
             args.add("--remapped");
 
         args.add("--rev");
@@ -120,6 +124,33 @@ public abstract class BuildSpigotTask extends JavaExec {
     private @NotNull RegularFile resolveDefaultOutputFile(@NotNull String minecraftVersion) {
         var directory = getBuildToolsService().flatMap(BuildToolsService::getOutputDirectory).get();
         return directory.file("spigot-%s.jar".formatted(minecraftVersion));
+    }
+
+    private @Nullable Boolean hasMappingsUrl(@NotNull String minecraftVersion) {
+        var buildInfoFile = getBuildToolsService().get().getMetadataBuildInfoFile(minecraftVersion);
+        var buildInfoModel = deserializeModel(buildInfoFile, BuildInfoModel.class);
+        if (buildInfoModel == null)
+            return null;
+
+        var buildDataRef = buildInfoModel.gitRefs().buildData();
+        var versionInfoFile = getBuildToolsService().get().getMetadataVersionInfoFile(buildDataRef);
+        var versionInfoModel = deserializeModel(versionInfoFile, VersionInfoModel.class);
+        if (versionInfoModel == null)
+            return null;
+
+        return versionInfoModel.mappingsUrl() != null;
+    }
+
+    private <T> @Nullable T deserializeModel(
+            @NotNull Provider<RegularFile> fileProvider,
+            @NotNull Class<T> type
+    ) {
+        try {
+            var filePath = fileProvider.get().getAsFile().toPath();
+            return JsonDeserializer.deserializeJson(filePath, type);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     @Input @Optional
