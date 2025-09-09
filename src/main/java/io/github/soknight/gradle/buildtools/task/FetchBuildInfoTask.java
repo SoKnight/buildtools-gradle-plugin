@@ -15,27 +15,24 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
-import static io.github.soknight.gradle.buildtools.Constants.DEFAULT_BUILD_VERSION;
-
 @CacheableTask
 public abstract class FetchBuildInfoTask extends DefaultTask {
 
     private static final @NotNull String URL = "https://hub.spigotmc.org/versions/%s.json";
 
     public FetchBuildInfoTask() {
-        getBuildInfo().set(getOutputFile().map(this::deserializeBuildInfo));
-        getBuildVersion().set(DEFAULT_BUILD_VERSION);
-        getOutputFile().set(getBuildVersion().map(this::resolveDefaultOutputFile));
+        getModel().set(getOutputFile().map(this::deserializeModel));
+        getOutputFile().set(getMinecraftVersion().flatMap(getBuildToolsService().get()::getMetadataBuildInfoFile));
     }
 
     @TaskAction
     public void run() {
-        var url = URL.formatted(getBuildVersion().get());
+        var url = URL.formatted(getMinecraftVersion().get());
         var outputPath = getOutputFile().get().getAsFile().toPath();
         Downloader.download(url, outputPath);
     }
 
-    private @NotNull BuildInfoModel deserializeBuildInfo(@NotNull RegularFile file) {
+    private @NotNull BuildInfoModel deserializeModel(@NotNull RegularFile file) {
         var filePath = file.getAsFile().toPath();
         try {
             var model = JsonDeserializer.deserializeJson(filePath, BuildInfoModel.class);
@@ -46,16 +43,11 @@ public abstract class FetchBuildInfoTask extends DefaultTask {
         }
     }
 
-    private @NotNull RegularFile resolveDefaultOutputFile(@NotNull String buildVersion) {
-        var directory = getBuildToolsService().flatMap(BuildToolsService::getBuildInfoCacheDirectory).get();
-        return directory.file("%s.json".formatted(buildVersion));
-    }
-
     @Internal
-    public abstract @NotNull Property<BuildInfoModel> getBuildInfo();
+    public abstract @NotNull Property<BuildInfoModel> getModel();
 
     @Input @Optional
-    public abstract @NotNull Property<String> getBuildVersion();
+    public abstract @NotNull Property<String> getMinecraftVersion();
 
     @OutputFile
     public abstract @NotNull RegularFileProperty getOutputFile();

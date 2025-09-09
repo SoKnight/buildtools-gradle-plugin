@@ -7,12 +7,11 @@ import java.util.*;
 import java.util.stream.IntStream;
 
 public record BuildInfoModel(
-        @JsonProperty("name") String name,
         @JsonProperty("description") String description,
-        @JsonProperty("refs") Map<String, String> gitRefs,
-        @JsonProperty("hashes") Map<String, String> hashes,
-        @JsonProperty("toolsVersion") Integer buildToolsVersion,
-        @JsonProperty("javaVersions") List<Integer> rawJavaVersionRange
+        @JsonProperty("javaVersions") int[] rawJavaVersions,
+        @JsonProperty("name") String name,
+        @JsonProperty("refs") Refs gitRefs,
+        @JsonProperty("toolsVersion") Integer buildToolsVersion
 ) {
 
     public static final int DEFAULT_JAVA_VERSION = 52;  // Java 8
@@ -21,14 +20,14 @@ public record BuildInfoModel(
     public static final @NotNull Set<Integer> JAVA_LTS_RELEASES = Set.of(52, 55, 61, 65, 69);
 
     public int minSupportedJavaVersion() {
-        return rawJavaVersionRange != null && rawJavaVersionRange.size() == 2
-                ? rawJavaVersionRange.stream().mapToInt(Integer::intValue).min().orElse(DEFAULT_JAVA_VERSION)
+        return rawJavaVersions != null && rawJavaVersions.length == 2
+                ? IntStream.of(rawJavaVersions).min().orElse(DEFAULT_JAVA_VERSION)
                 : DEFAULT_JAVA_VERSION;
     }
 
     public int maxSupportedJavaVersion() {
-        return rawJavaVersionRange != null && rawJavaVersionRange.size() == 2
-                ? rawJavaVersionRange.stream().mapToInt(Integer::intValue).max().orElse(DEFAULT_JAVA_VERSION)
+        return rawJavaVersions != null && rawJavaVersions.length == 2
+                ? IntStream.of(rawJavaVersions).max().orElse(DEFAULT_JAVA_VERSION)
                 : DEFAULT_JAVA_VERSION;
     }
 
@@ -56,5 +55,12 @@ public record BuildInfoModel(
         int maxVersion = maxSupportedJavaVersion();
         return IntStream.rangeClosed(minVersion, maxVersion).distinct();
     }
+
+    public record Refs(
+            @JsonProperty("BuildData") String buildData,
+            @JsonProperty("Bukkit") String bukkit,
+            @JsonProperty("CraftBukkit") String craftBukkit,
+            @JsonProperty("Spigot") String spigot
+    ) { }
 
 }

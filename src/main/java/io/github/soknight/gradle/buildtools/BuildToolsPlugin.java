@@ -4,6 +4,7 @@ import io.github.soknight.gradle.buildtools.extension.BuildToolsExtension;
 import io.github.soknight.gradle.buildtools.service.BuildToolsService;
 import io.github.soknight.gradle.buildtools.task.BuildSpigotTask;
 import io.github.soknight.gradle.buildtools.task.FetchBuildInfoTask;
+import io.github.soknight.gradle.buildtools.task.FetchVersionInfoTask;
 import io.github.soknight.gradle.buildtools.task.SetupBuildToolsTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -26,7 +27,7 @@ public final class BuildToolsPlugin implements Plugin<Project> {
 
     private void afterEvaluate(@NotNull Project project) {
         var extension = project.getExtensions().getByType(BuildToolsExtension.class);
-        var buildVersions = extension.getBuildVersions().getOrNull();
+        var buildVersions = extension.getMinecraftVersions().getOrNull();
         if (buildVersions == null || buildVersions.isEmpty())
             return;
 
@@ -36,14 +37,21 @@ public final class BuildToolsPlugin implements Plugin<Project> {
         var buildSpigotTasks = buildVersions.stream().distinct().map(buildVersion -> {
             var fetchBuildInfoTaskName = "fetchBuildInfo@%s".formatted(buildVersion);
             var fetchBuildInfoTask = tasks.register(fetchBuildInfoTaskName, FetchBuildInfoTask.class, task -> {
-                task.getBuildVersion().set(buildVersion);
+                task.getMinecraftVersion().set(buildVersion);
                 task.setGroup(TASK_GROUP_NAME);
+            });
+
+            var fetchVersionInfoTaskName = "fetchVersionInfo@%s".formatted(buildVersion);
+            var fetchVersionInfoTask = tasks.register(fetchVersionInfoTaskName, FetchVersionInfoTask.class, task -> {
+                task.setGroup(TASK_GROUP_NAME);
+                task.useFetchBuildInfoTask(fetchBuildInfoTask);
             });
 
             var buildSpigotTaskName = "buildSpigot@%s".formatted(buildVersion);
             return tasks.register(buildSpigotTaskName, BuildSpigotTask.class, task -> {
                 task.setGroup(TASK_GROUP_NAME);
                 task.useFetchBuildInfoTask(fetchBuildInfoTask);
+                task.useFetchVersionInfoTask(fetchVersionInfoTask);
             });
         }).toList();
 
@@ -61,7 +69,7 @@ public final class BuildToolsPlugin implements Plugin<Project> {
         project.getTasks().register("setupBuildTools", SetupBuildToolsTask.class, task -> {
             task.setGroup(TASK_GROUP_NAME);
 
-            task.getBuildNumber().set(extension.getBuildNumber());
+            task.getBuildNumber().set(extension.getBuildToolsVersion());
             task.getBuildNumber().finalizeValueOnRead();
 
             task.getOutputFile().set(service.flatMap(BuildToolsService::getBuildToolsJarFile));

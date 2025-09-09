@@ -13,10 +13,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BuildToolsService implements BuildService<BuildToolsServiceParameters> {
 
-    private static final @NotNull String BUILD_INFO_CACHE_DIRECTORY_NAME = "build-info-cache";
-    private static final @NotNull String BUILD_RESULT_CACHE_DIRECTORY_NAME = "build-result-cache";
-    private static final @NotNull String BUILD_TOOLS_JAR_FILE_NAME = "BuildTools.jar";
-
     private final @NotNull Lock buildToolsLock;
 
     public BuildToolsService() {
@@ -33,16 +29,28 @@ public abstract class BuildToolsService implements BuildService<BuildToolsServic
         this.buildToolsLock.unlock();
     }
 
-    public @NotNull Provider<Directory> getBuildInfoCacheDirectory() {
-        return getWorkingDirectory().dir(BUILD_INFO_CACHE_DIRECTORY_NAME);
-    }
-
-    public @NotNull Provider<Directory> getBuildResultCacheDirectory() {
-        return getWorkingDirectory().dir(BUILD_RESULT_CACHE_DIRECTORY_NAME);
-    }
-
     public @NotNull Provider<RegularFile> getBuildToolsJarFile() {
-        return getWorkingDirectory().file(BUILD_TOOLS_JAR_FILE_NAME);
+        return getWorkingDirectory().file("BuildTools.jar");
+    }
+
+    public @NotNull Provider<Directory> getMetadataDirectory() {
+        return getWorkingDirectory().dir("metadata");
+    }
+
+    public @NotNull Provider<RegularFile> getMetadataBuildInfoFile(@NotNull String minecraftVersion) {
+        return getMetadataDirectory()
+                .map(dir -> dir.dir("build-info"))
+                .map(dir -> dir.file("%s.json".formatted(minecraftVersion)));
+    }
+
+    public @NotNull Provider<RegularFile> getMetadataVersionInfoFile(@NotNull String buildDataRef) {
+        return getMetadataDirectory()
+                .map(dir -> dir.dir("version-info"))
+                .map(dir -> dir.file("%s.json".formatted(buildDataRef)));
+    }
+
+    public @NotNull Provider<Directory> getOutputDirectory() {
+        return getWorkingDirectory().dir("out");
     }
 
     public @NotNull DirectoryProperty getWorkingDirectory() {

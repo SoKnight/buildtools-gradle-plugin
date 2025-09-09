@@ -7,8 +7,6 @@ import org.jetbrains.annotations.NotNull;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class Constants {
 
-    public static final @NotNull String DEFAULT_BUILD_VERSION = "latest";
-
     public static final @NotNull String USER_AGENT = "BuildTools Gradle Plugin";
 
 }

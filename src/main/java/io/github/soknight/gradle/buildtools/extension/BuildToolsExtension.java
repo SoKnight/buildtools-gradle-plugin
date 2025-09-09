@@ -7,11 +7,11 @@ import org.jetbrains.annotations.NotNull;
 
 public abstract class BuildToolsExtension {
 
-    public abstract @NotNull Property<Integer> getBuildNumber();
+    public abstract @NotNull Property<Integer> getBuildToolsVersion();
 
     public abstract @NotNull Property<Boolean> getBuildRemappedJars();
 
-    public abstract @NotNull ListProperty<String> getBuildVersions();
+    public abstract @NotNull ListProperty<String> getMinecraftVersions();
 
     public abstract @NotNull DirectoryProperty getWorkingDirectory();
 
