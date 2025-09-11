@@ -23,10 +23,6 @@ public abstract class ExpectedArtifactsDefinition {
         expect(ExpectedArtifactType.MAPPINGS_SPIGOT, isExpected);
     }
 
-    public void mappingsSpigotMembers(boolean isExpected) {
-        expect(ExpectedArtifactType.MAPPINGS_SPIGOT_MEMBERS, isExpected);
-    }
-
     public void minecraftServerJar(boolean isExpected) {
         expect(ExpectedArtifactType.MINECRAFT_SERVER_JAR, isExpected);
     }

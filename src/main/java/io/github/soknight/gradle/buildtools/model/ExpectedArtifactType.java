@@ -12,7 +12,6 @@ public enum ExpectedArtifactType {
 
     MAPPINGS_MOJANG             ("minecraft-server",    "maps-mojang",          "txt"),
     MAPPINGS_SPIGOT             ("minecraft-server",    "maps-spigot",          "csrg"),
-    MAPPINGS_SPIGOT_MEMBERS     ("minecraft-server",    "maps-spigot-members",  "csrg"),
     MINECRAFT_SERVER_JAR        ("minecraft-server"),
     SPIGOT_API_JAR              ("spigot-api"),
     SPIGOT_JAR                  ("spigot"),
