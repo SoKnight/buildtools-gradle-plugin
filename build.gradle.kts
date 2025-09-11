@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "io.github.soknight"
-version = "1.1"
+version = "1.2"
 
 gradlePlugin {
     vcsUrl = "https://github.com/SoKnight/buildtools-gradle-plugin.git"
